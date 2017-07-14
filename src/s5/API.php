@@ -65,11 +65,16 @@ class API
             $requestURL = $this->OAuth->RequestCode($returnURL, $scope);
             $prevScope = request()->session()->get(self::SessionScopeStore, []);
 
+            $x = new \Illuminate\Session\Middleware\StartSession(session());
+
             request()->session()->set(self::SessionStateStore, $requestURL->State);
             request()->session()->set(self::SessionRequestedScopeStore, array_merge($prevScope, $scope));
 
-            header('Location: '.$requestURL->URL);
-            exit;
+            request()->session()->save();
+
+            $response = $x->handle(request(), function() use($requestURL) {return redirect()->to($requestURL->URL);});
+            $x->terminate(request(), $response);
+            $response->send();exit;
         }
 
         $this->AccessToken = request()->session()->get(self::SessionAccessTokenStore);
